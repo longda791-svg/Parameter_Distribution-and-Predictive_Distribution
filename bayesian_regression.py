@@ -2,14 +2,41 @@ import numpy as np
 from scipy.stats import multivariate_normal
 
 class BayesianRegression:
+    """贝叶斯线性回归模型
+    
+    实现了完整的贝叶斯线性回归，包括：
+    1. 多项式基函数特征转换
+    2. 贝叶斯推断（先验、似然、后验）
+    3. 预测分布计算
+    4. 参数后验分布可视化（注：仅支持查看前两个权重的分布）
+    
+    数学原理：
+    - 先验分布：p(w) = N(w|0, α⁻¹I)
+    - 似然函数：p(t|x,w,β) = N(w^Tφ(x), β⁻¹)
+    - 后验分布：p(w|D) = N(w|m_N, S_N)
+    其中：
+        S_N⁻¹ = αI + βΦ^TΦ
+        m_N = βS_NΦ^Tt
+    
+    预测分布：
+    p(t_*|x_*,D) = N(m(x_*), s²(x_*))
+    其中：
+        m(x_*) = m_N^T φ(x_*)
+        s²(x_*) = 1/β + φ(x_*)^T S_N φ(x_*)
+    """
+    
     def __init__(self, degree=3, alpha=2.0, beta=25.0):
         """
         初始化贝叶斯线性回归模型
         
         参数:
-        degree: int, 多项式基函数的阶数
-        alpha: float, 权重先验分布的精度参数
-        beta: float, 观测噪声的精度参数
+        degree: int, 多项式基函数的阶数，决定了模型的复杂度和参数维度(degree+1)
+        alpha: float, 权重先验分布的精度参数，控制了先验的强度
+        beta: float, 观测噪声的精度参数，控制了对数据的信任程度
+        
+        注意：
+        - 虽然模型支持任意阶数的多项式，但参数可视化仅展示前两个权重
+        - 当degree > 1时，参数后验分布的可视化是高维分布在前两维上的投影
         """
         self.degree = degree
         self.alpha = alpha
@@ -66,14 +93,20 @@ class BayesianRegression:
         """
         获取参数的后验分布（仅返回前两个参数的分布）
         
+        注意：这是一个降维可视化方法。当多项式阶数 > 1 时，模型参数维度 > 2，
+        此时返回的是高维参数空间在前两个权重上的投影（边缘分布）。这种可视化
+        方法遵循了 Bishop 教材中图 3.7 的展示方式。
+        
         参数:
         param_range: tuple, 参数空间的范围
         n_points: int, 网格点的数量
         
         返回:
-        W: ndarray, 第一个参数的网格
-        B: ndarray, 第二个参数的网格
+        W: ndarray, 第一个参数(w₀)的网格
+        B: ndarray, 第二个参数(w₁)的网格
         Z: ndarray, 每个网格点的概率密度
+        
+        注意：返回的概率密度是完整后验分布在前两个参数维度上的边缘分布
         """
         if self.m_N is None or self.S_N is None:
             raise ValueError("模型尚未拟合，请先调用fit方法")
